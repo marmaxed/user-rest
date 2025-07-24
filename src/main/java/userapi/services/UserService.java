@@ -1,13 +1,14 @@
 package userapi.services;
 
-import org.springframework.http.HttpStatus;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import userapi.models.entities.Role;
 import userapi.models.entities.User;
 import userapi.models.rest.UserRequestDTO;
 import userapi.repositories.RoleRepository;
 import userapi.repositories.UserRepository;
+import userapi.system.NotFoundException;
 
 import java.util.UUID;
 
@@ -27,8 +28,11 @@ public class UserService {
         return userRepo.save(user);
     }
 
-    public User getUser(UUID id) {
-        return userRepo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found"));
+    @Cacheable(value = "users", key = "#userId")
+    public User getUser(UUID userId) {
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new NotFoundException(userId));
+        return user;
     }
 
     public User updateUser(UUID id, UserRequestDTO dto) {
@@ -40,6 +44,7 @@ public class UserService {
         return userRepo.save(user);
     }
 
+    @CacheEvict(value = "users", key = "#userId")
     public void deleteUser(UUID id) {
         User user = getUser(id);
         Role role = user.getRole();
